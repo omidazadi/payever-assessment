@@ -1,0 +1,38 @@
+services:
+    payever-mongodb:
+        container_name: payever-mongodb
+        image: mongo:7.0.0
+        ports:
+            - 27018:27017
+        restart: always
+        environment:
+            MONGO_INITDB_ROOT_USERNAME: root
+            MONGO_INITDB_ROOT_PASSWORD: abcdef
+        volumes:
+            - payever-mongodb-volume:/data/db
+        networks:
+            - payever-network
+
+    payever-rabbitmq:
+        container_name: payever-rabbitmq
+        image: rabbitmq:3-management
+        ports:
+            - 5672:5672
+            - 15672:15672
+        restart: always
+        volumes:
+            - payever-rabbitmq-data-volume:/var/lib/rabbitmq/
+            - payever-rabbitmq-log-volume:/var/log/rabbitmq
+        networks:
+            - payever-network
+networks:
+    payever-network:
+        name: payever-network
+
+volumes:
+    payever-mongodb-volume:
+        name: payever-mongodb-volume
+    payever-rabbitmq-data-volume:
+        name: payever-rabbitmq-data-volume
+    payever-rabbitmq-log-volume:
+        name: payever-rabbitmq-log-volume
