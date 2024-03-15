@@ -2,7 +2,7 @@
 
 Test project with NestJS, MongoDB, and RabbitMQ. Contains end-to-end tests on Jest test suite.
 
-## Prerequisite
+## Prerequisites
 
 This service requires MongoDB and RabbitMQ to operate. You have to either provide these services, or use the command below to build a containerized version of them in your local machine:
 
@@ -42,7 +42,7 @@ RMQ_HOST=localhost
 RMQ_PORT=5672
 ```
 
-## Build
+## Install Dependencies
 
 ```bash
 npm install
