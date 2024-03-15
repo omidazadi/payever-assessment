@@ -20,12 +20,12 @@ export class CreateUserBodyDto {
     @IsNotEmpty()
     public email: string;
 
-    @MinLength(1)
+    @MinLength(3)
     @MaxLength(32)
     @IsNotEmpty()
     public first_name: string;
 
-    @MinLength(1)
+    @MinLength(3)
     @MaxLength(32)
     @IsNotEmpty()
     public last_name: string;

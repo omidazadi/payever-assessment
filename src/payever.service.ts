@@ -1,4 +1,4 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { HttpException, HttpStatus, Inject, Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import axios from 'axios';
 import crypto from 'crypto';
@@ -31,7 +31,13 @@ export class PayeverService {
             lastName: lastName,
             avatarUrl: avatarUrl,
         });
-        await createdUser.save();
+
+        try {
+            await createdUser.save();
+        } catch (e: unknown) {
+            throw new HttpException('Bad Request', HttpStatus.BAD_REQUEST);
+        }
+
         this.mailerService.notifyAdmin('New User!', `User ${id} just arrived!`);
         this.consumerClient.emit('UserCreate', createdUser);
     }
