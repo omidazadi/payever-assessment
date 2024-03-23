@@ -27,7 +27,7 @@ Then provide the following environment variables for the service. You can store 
 | RMQ_HOST                        | RabbitMQ host.                                         | localhost         |
 | RMQ_PORT                        | RabbitMQ port.                                         | 5672              |
 | FILE_SYSTEM_AVATAR_STORAGE_PATH | Directory name in file systemto store fetched avatars. | avatar            |
-| REQRES_BASE_URL                 | Base URL for reqres website                            | https://resres.in |
+| REQRES_BASE_URL                 | Base URL for reqres website                            | https://reqres.in |
 | MOCKSERVER_PORT                 | Mockserver port (only used in integration tests).      | 10001             |
 
 ## Install Dependencies

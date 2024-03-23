@@ -16,7 +16,7 @@ export class ReqresConfig {
             | undefined,
     ) {
         if (typeof values === 'undefined') {
-            this.baseUrl = process.env.REQRES_BASE_URL || 'https://resres.in';
+            this.baseUrl = process.env.REQRES_BASE_URL || 'https://reqres.in';
         } else {
             this.baseUrl = values.baseUrl;
         }
