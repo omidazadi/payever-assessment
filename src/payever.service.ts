@@ -1,20 +1,25 @@
 import { HttpException, HttpStatus, Inject, Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import axios from 'axios';
 import crypto from 'crypto';
 import { Model } from 'mongoose';
 import { User } from './schemas/user.schema';
 import { Avatar } from './schemas/avatar.schema';
-import { MailerService } from './mailer.service';
 import { ClientProxy } from '@nestjs/microservices';
+import { MailAdapter } from './adapters/mail.adapter';
+import { ReqresAdapter } from './adapters/reqres.adapter';
+import { FileSystemAdapter } from './adapters/file-system.adapter';
+import { GetUserReqresResDto } from './dtos/reqres-res/get-user.reqres-res-dto';
+import { lastValueFrom } from 'rxjs';
 
 @Injectable()
 export class PayeverService {
     constructor(
-        @Inject('CONSUMER_SERVICE') private consumerClient: ClientProxy,
+        @Inject('RMQ') private messageQueue: ClientProxy,
         @InjectModel(User.name) private userModel: Model<User>,
         @InjectModel(Avatar.name) private avatarModel: Model<Avatar>,
-        private mailerService: MailerService,
+        private mailAdapter: MailAdapter,
+        private reqresAdapter: ReqresAdapter,
+        private fileSystemAdapter: FileSystemAdapter,
     ) {}
 
     public async createUser(
@@ -35,63 +40,127 @@ export class PayeverService {
         try {
             await createdUser.save();
         } catch (e: unknown) {
-            throw new HttpException('Bad Request', HttpStatus.BAD_REQUEST);
+            if (
+                e !== null &&
+                typeof e === 'object' &&
+                'code' in e &&
+                e.code === 11000
+            ) {
+                throw new HttpException(
+                    'User already exists.',
+                    HttpStatus.BAD_REQUEST,
+                );
+            } else {
+                throw new HttpException(
+                    'Could not proceed with the request.',
+                    HttpStatus.BAD_REQUEST,
+                );
+            }
         }
 
-        this.mailerService.notifyAdmin('New User!', `User ${id} just arrived!`);
-        this.consumerClient.emit('UserCreate', createdUser);
-    }
+        try {
+            await this.mailAdapter.notifyAdmin(
+                'New User!',
+                `User ${id} just arrived!`,
+            );
+        } catch (e: unknown) {
+            throw new HttpException(
+                'Could not proceed with the request.',
+                HttpStatus.BAD_REQUEST,
+            );
+        }
 
-    public async retrieveUser(userId: number): Promise<User> {
-        const result = await axios.get(`https://reqres.in/api/users/${userId}`);
-        if (typeof result.data.data !== 'undefined') {
-            const user = new this.userModel({
-                id: result.data.data.id,
-                email: result.data.data.email,
-                firstName: result.data.data.first_name,
-                lastName: result.data.data.last_name,
-                avatarUrl: result.data.data.avatar,
+        try {
+            const eventsObservable = this.messageQueue.emit('UserCreated', {
+                id: id,
             });
-
-            return user;
-        } else {
-            throw new Error('Could not fetch the data from reqres.in');
+            await lastValueFrom(eventsObservable);
+        } catch (e: unknown) {
+            throw new HttpException(
+                'Could not proceed with the request.',
+                HttpStatus.BAD_REQUEST,
+            );
         }
     }
 
-    public async retrieveAndGetAvatar(userId: number): Promise<string> {
+    public async getUser(userId: number): Promise<User> {
+        try {
+            const reqresUser = await this.reqresAdapter.getUser(userId);
+            return new this.userModel({
+                id: reqresUser.data.id,
+                email: reqresUser.data.email,
+                firstName: reqresUser.data.first_name,
+                lastName: reqresUser.data.last_name,
+                avatarUrl: reqresUser.data.avatar,
+            });
+        } catch (e: unknown) {
+            throw new HttpException(
+                'Could not proceed with the request.',
+                HttpStatus.BAD_REQUEST,
+            );
+        }
+    }
+
+    public async getAvatar(userId: number): Promise<[string, boolean]> {
         const savedAvatar = await this.avatarModel.findOne({ userId: userId });
         if (savedAvatar !== null) {
-            return savedAvatar.data.toString('base64');
-        } else {
-            const result = await axios.get(
-                `https://reqres.in/api/users/${userId}`,
-            );
-            if (typeof result.data.data !== 'undefined') {
-                const imageResult = await axios.get(result.data.data.avatar, {
-                    responseType: 'arraybuffer',
-                });
-                if (typeof imageResult.data !== 'undefined') {
-                    const hashSum = crypto.createHash('sha256');
-                    hashSum.update(imageResult.data);
-                    const createdAvater = new this.avatarModel({
-                        userId: result.data.data.id,
-                        hash: hashSum.digest('hex'),
-                        data: imageResult.data,
-                    });
-                    await createdAvater.save();
-
-                    return createdAvater.data.toString('base64');
-                } else {
-                    throw new Error('Could not fetch the avatar.');
-                }
-            } else {
-                throw new Error('Could not fetch the data from reqres.in');
+            try {
+                return [
+                    (
+                        await this.fileSystemAdapter.getAvatar(
+                            savedAvatar.userId.toString(),
+                        )
+                    ).toString('base64'),
+                    true,
+                ];
+            } catch (e: unknown) {
+                throw new HttpException(
+                    'Internal Server Error.',
+                    HttpStatus.INTERNAL_SERVER_ERROR,
+                );
             }
+        } else {
+            let reqresUser: GetUserReqresResDto;
+            let image: Buffer;
+
+            try {
+                reqresUser = await this.reqresAdapter.getUser(userId);
+                image = await this.reqresAdapter.downloadResource(
+                    reqresUser.data.avatar,
+                );
+            } catch (e: unknown) {
+                throw new HttpException(
+                    'Could not proceed with the request.',
+                    HttpStatus.BAD_REQUEST,
+                );
+            }
+
+            const hashSum = crypto.createHash('sha256');
+            hashSum.update(image);
+            const createdAvater = new this.avatarModel({
+                userId: reqresUser.data.id,
+                hash: hashSum.digest('hex'),
+            });
+            await createdAvater.save();
+            await this.fileSystemAdapter.saveAvatar(
+                reqresUser.data.id.toString(),
+                image,
+            );
+            return [image.toString('base64'), false];
         }
     }
 
     public async deleteAvatar(userId: number): Promise<void> {
-        await this.avatarModel.findOneAndDelete({ userId: userId });
+        const avatar = await this.avatarModel.findOneAndDelete({
+            userId: userId,
+        });
+        if (avatar !== null) {
+            await this.fileSystemAdapter.deleteAvatar(userId.toString());
+        } else {
+            throw new HttpException(
+                'Could not delete the avatar. It was not cached before.',
+                HttpStatus.BAD_REQUEST,
+            );
+        }
     }
 }

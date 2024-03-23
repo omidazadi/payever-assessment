@@ -15,7 +15,6 @@ export class MongoConfig {
     public rootUsername: string;
 
     @IsString()
-    @IsNotEmpty()
     public rootPassword: string;
 
     @IsString()
@@ -32,12 +31,30 @@ export class MongoConfig {
     @IsNotEmpty()
     public database: string;
 
-    public constructor() {
-        this.rootUsername = process.env.MONGO_ROOT_USERNAME!;
-        this.rootPassword = process.env.MONGO_ROOT_PASSWORD!;
-        this.host = process.env.MONGO_HOST!;
-        this.port = parseInt(process.env.MONGO_PORT!);
-        this.database = process.env.MONGO_DATABASE!;
+    public constructor(
+        values?:
+            | {
+                  rootUsername: string;
+                  rootPassword: string;
+                  host: string;
+                  port: number;
+                  database: string;
+              }
+            | undefined,
+    ) {
+        if (typeof values === 'undefined') {
+            this.rootUsername = process.env.MONGO_ROOT_USERNAME || 'root';
+            this.rootPassword = process.env.MONGO_ROOT_PASSWORD || '';
+            this.host = process.env.MONGO_HOST || 'localhost';
+            this.port = parseInt(process.env.MONGO_PORT || '27017');
+            this.database = process.env.MONGO_DATABASE || 'payever';
+        } else {
+            this.rootUsername = values.rootUsername;
+            this.rootPassword = values.rootPassword;
+            this.host = values.host;
+            this.port = values.port;
+            this.database = values.database;
+        }
     }
 }
 

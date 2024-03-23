@@ -1,0 +1,16 @@
+HTTP/1.1 200 OK
+Content-Type: application/json; charset=utf-8
+
+{
+    "data": {
+        "id": 1,
+        "email": "azadiomid80@gmail.com",
+        "first_name": "omid",
+        "last_name": "azadi",
+        "avatar": "google.com"
+    },
+    "support": {
+        "text": "Plz support me!",
+        "url": "google.com"
+    }
+}

@@ -3,6 +3,7 @@ dotenv.config();
 import { NestFactory } from '@nestjs/core';
 import { PayeverModule } from './payever.module';
 import { ValidationPipe } from '@nestjs/common';
+import { appConfig } from './configs/app.config';
 
 async function bootstrap() {
     const app = await NestFactory.create(PayeverModule);
@@ -11,6 +12,6 @@ async function bootstrap() {
             transform: true,
         }),
     );
-    await app.listen(3000);
+    await app.listen(appConfig.port);
 }
 bootstrap();

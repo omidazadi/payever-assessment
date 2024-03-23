@@ -11,13 +11,9 @@ export class Avatar {
     @Prop({ required: true })
     hash: string;
 
-    @Prop({ required: true })
-    data: Buffer;
-
-    public constructor(userId: number, hash: string, data: Buffer) {
+    public constructor(userId: number, hash: string) {
         this.userId = userId;
         this.hash = hash;
-        this.data = data;
     }
 }
 

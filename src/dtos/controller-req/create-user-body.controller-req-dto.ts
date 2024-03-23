@@ -1,7 +1,9 @@
+import { Expose } from 'class-transformer';
 import {
     IsEmail,
     IsNotEmpty,
     IsNumber,
+    IsString,
     IsUrl,
     Max,
     MaxLength,
@@ -9,29 +11,38 @@ import {
     MinLength,
 } from 'class-validator';
 
-export class CreateUserBodyDto {
+export class CreateUserBodyControllerReqDto {
     @Min(1)
     @Max(1000)
     @IsNumber()
     @IsNotEmpty()
+    @Expose()
     public id: number;
 
     @IsEmail()
+    @IsString()
     @IsNotEmpty()
+    @Expose()
     public email: string;
 
     @MinLength(3)
     @MaxLength(32)
+    @IsString()
     @IsNotEmpty()
+    @Expose()
     public first_name: string;
 
     @MinLength(3)
     @MaxLength(32)
+    @IsString()
     @IsNotEmpty()
+    @Expose()
     public last_name: string;
 
     @IsUrl()
+    @IsString()
     @IsNotEmpty()
+    @Expose()
     public avatar: string;
 
     public constructor(

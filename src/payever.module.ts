@@ -4,17 +4,24 @@ import { PayeverController } from './payever.controller';
 import { PayeverService } from './payever.service';
 import { User, UserSchema } from './schemas/user.schema';
 import { Avatar, AvatarSchema } from './schemas/avatar.schema';
-import { MailerConfig, mailerConfig } from './configs/mailer.config';
-import { MailerService } from './mailer.service';
+import { MailConfig, mailConfig } from './configs/mail.config';
 import { mongoConfig } from './configs/mongo.config';
 import { ClientsModule, Transport } from '@nestjs/microservices';
 import { rmqConfig } from './configs/rmq.config';
+import {
+    FileSystemConfig,
+    fileSystemConfig,
+} from './configs/file-system.config';
+import { MailAdapter } from './adapters/mail.adapter';
+import { ReqresAdapter } from './adapters/reqres.adapter';
+import { FileSystemAdapter } from './adapters/file-system.adapter';
+import { ReqresConfig, reqresConfig } from './configs/reqres.config';
 
 @Module({
     imports: [
         ClientsModule.register([
             {
-                name: 'CONSUMER_SERVICE',
+                name: 'RMQ',
                 transport: Transport.RMQ,
                 options: {
                     urls: [`amqp://${rmqConfig.host}:${rmqConfig.port}`],
@@ -33,10 +40,20 @@ import { rmqConfig } from './configs/rmq.config';
     controllers: [PayeverController],
     providers: [
         PayeverService,
-        MailerService,
+        MailAdapter,
+        ReqresAdapter,
+        FileSystemAdapter,
         {
-            provide: MailerConfig,
-            useValue: mailerConfig,
+            provide: MailConfig,
+            useValue: mailConfig,
+        },
+        {
+            provide: FileSystemConfig,
+            useValue: fileSystemConfig,
+        },
+        {
+            provide: ReqresConfig,
+            useValue: reqresConfig,
         },
     ],
 })

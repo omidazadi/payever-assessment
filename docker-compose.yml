@@ -25,6 +25,7 @@ services:
             - payever-rabbitmq-log-volume:/var/log/rabbitmq
         networks:
             - payever-network
+
 networks:
     payever-network:
         name: payever-network

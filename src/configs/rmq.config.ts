@@ -20,9 +20,14 @@ export class RMQConfig {
     @IsNotEmpty()
     public port: number;
 
-    public constructor() {
-        this.host = process.env.RMQ_HOST!;
-        this.port = parseInt(process.env.RMQ_PORT!);
+    public constructor(values?: { host: string; port: number } | undefined) {
+        if (typeof values === 'undefined') {
+            this.host = process.env.RMQ_HOST || 'localhost';
+            this.port = parseInt(process.env.RMQ_PORT || '5672');
+        } else {
+            this.host = values.host;
+            this.port = values.port;
+        }
     }
 }
 
